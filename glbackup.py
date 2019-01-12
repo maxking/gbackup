@@ -34,7 +34,7 @@ def get_config():
     config_file = get_config_file()
     # First, let's see if there is a config file present.
     config = configparser.ConfigParser()
-    config.read(config_file)
+    config.read(str(config_file))
     if not 'main' in config:
         msg = 'No `main` section in config file {}'.format(config_file)
         raise ValueError(msg)
@@ -68,7 +68,7 @@ def download_project(project, config, gl):
 
     print('Downloading backup for {0} to {1}'.format(
         project.web_url, backup_file))
-    with open(backup_file, 'wb') as fd:
+    with open(str(backup_file), 'wb') as fd:
         export.download(streamed=True, action=fd.write)
 
 
