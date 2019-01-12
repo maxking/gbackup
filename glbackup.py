@@ -85,7 +85,7 @@ def get_projects(gl, config):
             projects.extend(group.projects.list())
     if 'user' in config:
         for username in config['user'].split():
-            user = gl.users.list(username=username)
+            user = gl.users.list(username=username)[0]
             projects.extend(user.projects.list())
     return projects
 
