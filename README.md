@@ -1,7 +1,8 @@
 glbackup
 ==========
 
-A utility to backup all [Gitlab](https://gitlab.com) projects of a user or group.
+A utility to backup all [Gitlab](https://gitlab.com) projects of a user or
+group. It can download projects of multiple groups and users.
 
 # Requirements
 
