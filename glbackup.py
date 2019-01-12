@@ -59,8 +59,9 @@ def download_project(project, config, gl):
         export.refresh()
 
     backup_path = Path(
-        config['backup_dir'],
-        project.path_with_namespace).expanduser()
+        config.get('backup_dir', '~/.gitlab-backup'),
+        project.path_with_namespace)
+    backup_path.expanduser()
     backup_path.mkdir(parents=True, exist_ok=True)
 
     backup_file = backup_path / time.strftime('%d-%b-%Y-%H-%M.tar.gz')
