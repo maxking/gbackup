@@ -21,8 +21,12 @@ optional, you can specify whichever one you want to backup.
 [main]
 server = https://gitlab.com
 token = <access-token>
-group = <gitlab-group>
-user = <gitlab-username>
+group =
+  <gitlab-group1>
+  <gitlab-group2>
+  <gitlab-group3>
+user =
+  <gitlab-username>
 backup_dir = ~/.gitlab-backup
 ```
 

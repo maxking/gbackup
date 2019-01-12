@@ -16,8 +16,10 @@ def get_config_file():
         [main]
         server = https://gitlab.com
         token = <persosonal-token>
-        group = <group-name>
-        user = <gitlab-username>
+        group =
+          <group-name>
+        user =
+          <gitlab-username>
         backup_dir = ~/.gitlab-backup
 
     """
@@ -78,11 +80,13 @@ def get_projects(gl, config):
     """
     projects = []
     if 'group' in config:
-        mm_group = gl.groups.get(config['group'])
-        projects.extend(mm_group.projects.list())
+        for group_name in config['group'].split():
+            group = gl.groups.get(group_name)
+            projects.extend(group.projects.list())
     if 'user' in config:
-        user = gl.users.list(username=config['user'])
-        projects.extend(user.projects.list())
+        for username in config['user'].split():
+            user = gl.users.list(username=username)
+            projects.extend(user.projects.list())
     return projects
 
 
