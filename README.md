@@ -13,7 +13,8 @@ These setup requirements will setup a python
 [virtualenv](https://virtualenv.pypa.io/en/latest/) to run the script which
 backs up all your projects.
 
-First, setup a config file with your access credentials:
+First, setup a config file with your access credentials. `user` and `group` are
+optional, you can specify whichever one you want to backup.
 
 ```
 # ~/.glbackup.ini
@@ -35,6 +36,8 @@ $ python3 -m venv gitlab
 $ source gitlab/bin/activate
 (gitlab)$ pip install python-gitlab
 ```
+
+# Usage
 
 Finally, to start the backup, run the `glbackup.py` script.
 
