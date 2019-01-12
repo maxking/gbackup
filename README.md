@@ -46,3 +46,7 @@ $ ./glbackup.py
 Downloading backup for https://gitlab.com/maxking/mailman to /home/maxking/.gitlab-backup/maxking/mailman/11-Jan-2019-19-53.tar.gz
 ```
 
+# License
+
+All the contents of this repository is licensed under Apache License
+v2.0. Please see the LICENSE file for complete license text.
