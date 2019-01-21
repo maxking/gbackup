@@ -19,7 +19,8 @@ optional, you can specify whichever one you want to backup.
 
 ```
 # ~/.gbackup.ini
-[main]
+[gitlab.com]
+type = gitlab
 server = https://gitlab.com
 token = <access-token>
 group =
@@ -36,10 +37,10 @@ backup.
 
 ```bash
 $ git clone https://github.com/maxking/gbackup
-$ cd glbackup
+$ cd gbackup
 $ python3 -m venv gitlab
 $ source gitlab/bin/activate
-(gitlab)$ pip install python-gitlab
+(gitlab)$ python setup.py install
 ```
 
 # Usage
@@ -48,7 +49,7 @@ Finally, to start the backup, run the `gbackup.py` script.
 
 ```
 $ ./gbackup.py
-Downloading backup for https://gitlab.com/maxking/mailman to /home/maxking/.gitlab-backup/maxking/mailman/11-Jan-2019-19-53.tar.gz
+Downloading backup for https://gitlab.com/maxking/mailman to /home/maxking/.gitlab-backup/gitlab.com/maxking/mailman/11-Jan-2019-19-53.tar.gz
 ```
 
 # License

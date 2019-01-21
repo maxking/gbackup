@@ -18,7 +18,8 @@ def get_config_file():
 
     A typical project config looks something like this::
 
-        [gitlab]
+        [gitlab.com]
+        type = gitlab
         server = https://gitlab.com
         token = <persosonal-token>
         group =
@@ -46,14 +47,29 @@ def get_config():
 
 
 def gl_get_instance(config):
-    """Return an instance of gitlab.Gitlab with proper authentication"""
+    """Return an instance of gitlab.Gitlab with proper authentication creds.
+
+    :param config: Configuration for Gitlab from config file.
+    :type config: dict
+    """
     return gitlab.Gitlab(
         config['server'],
         private_token=config['token'])
 
 
-def gl_download_project(project, config, gl):
-    """Download the backup of a project on to host."""
+def gl_download_project(project, config, gl, section):
+    """Download the backup of a project on to host.
+
+    :param project: Project to download.
+    :type project: gitlab.v4.objects.Project
+    :param config: The configuration for Gitlab from config file.
+    :type config: dict
+    :param gl: An instance of gitlab.Gitlab API.
+    :type gl: :class:`gitlab.Gitlab`
+    :param section: The name of the section in config file this project belongs
+        to. Used to generate the download path.
+    :type section: str
+    """
     project = gl.projects.get(project.id)
     export = project.exports.create({})
     # Wait for the finished status.
@@ -64,6 +80,7 @@ def gl_download_project(project, config, gl):
 
     backup_path = Path(
         config.get('backup_dir', '~/.gitlab-backup'),
+        section,
         project.path_with_namespace)
     backup_path.expanduser()
     backup_path.mkdir(parents=True, exist_ok=True)
@@ -82,6 +99,11 @@ def gl_get_projects(gl, config):
     This function looks at the config and returns all the projects of a user if
     `user` is specified and all the projects of a group if `group` is specified
     in the config.
+
+    :param gl: An instance of Gitlab's API.
+    :type gl: :class:`gitlab.Gitlab`
+    :param config: Configuration for Gitlab from config gile.
+    :type config: dict
     """
     projects = []
     if 'group' in config:
@@ -95,11 +117,17 @@ def gl_get_projects(gl, config):
     return projects
 
 
-def backup_gitlab(config):
-    """Backup Gitlab projects."""
+def backup_gitlab(config, section):
+    """Backup Gitlab projects.
+
+    :param config: The configuration to backup gitlab.
+    :type config: dict
+    :param section: The name of the section to backup.
+    :type section: str
+    """
     gl = gl_get_instance(config)
     for project in gl_get_projects(gl, config):
-        gl_download_project(project, config, gl)
+        gl_download_project(project, config, gl, section)
 
 
 def main():
@@ -113,15 +141,17 @@ def main():
         'gitlab': backup_gitlab,
     }
     # Run backup of each website.
-    for section in config.sections():
-        if section not in SECTION_TO_UTILITY:
-            log.error('Unsupported section [%s] in config', section)
-        # Run the actual backup.
-        log.info('Backing up %s', section)
+    for section_name in config.sections():
+        section = config[section_name]
         try:
-            SECTION_TO_UTILITY[section](config[section])
-        except Exception as e:
-            log.error('Failed to backup [%s] because of: %s', section, e)
+            if section['type'] not in SECTION_TO_UTILITY:
+                log.error('Unsupported section [%s] in config', section_name)
+                # Run the actual backup.
+            log.info('Backing up %s', section_name)
+            try:
+                SECTION_TO_UTILITY[section['type']](section, section_name)
+            except Exception as e:
+                log.error('Failed to backup [%s] because of: %s', section_name, e)
 
 
 if __name__ == '__main__':
