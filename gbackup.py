@@ -23,7 +23,7 @@ def get_config_file():
         backup_dir = ~/.gitlab-backup
 
     """
-    default_config = Path(Path.home(), '.glbackup.ini')
+    default_config = Path(Path.home(), '.gbackup.ini')
     if default_config.exists():
         return default_config
     return None

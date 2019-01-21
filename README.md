@@ -1,4 +1,4 @@
-glbackup
+gbackup
 ==========
 
 A utility to backup all [Gitlab](https://gitlab.com) projects of a user or
@@ -18,7 +18,7 @@ First, setup a config file with your access credentials. `user` and `group` are
 optional, you can specify whichever one you want to backup.
 
 ```
-# ~/.glbackup.ini
+# ~/.gbackup.ini
 [main]
 server = https://gitlab.com
 token = <access-token>
@@ -35,7 +35,7 @@ Now, let's setup [virtualenv]((https://virtualenv.pypa.io/en/latest/)) and start
 backup.
 
 ```bash
-$ git clone https://github.com/maxking/glbackup
+$ git clone https://github.com/maxking/gbackup
 $ cd glbackup
 $ python3 -m venv gitlab
 $ source gitlab/bin/activate
@@ -44,10 +44,10 @@ $ source gitlab/bin/activate
 
 # Usage
 
-Finally, to start the backup, run the `glbackup.py` script.
+Finally, to start the backup, run the `gbackup.py` script.
 
 ```
-$ ./glbackup.py
+$ ./gbackup.py
 Downloading backup for https://gitlab.com/maxking/mailman to /home/maxking/.gitlab-backup/maxking/mailman/11-Jan-2019-19-53.tar.gz
 ```
 
