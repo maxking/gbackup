@@ -118,7 +118,10 @@ def main():
             log.error('Unsupported section [%s] in config', section)
         # Run the actual backup.
         log.info('Backing up %s', section)
-        SECTION_TO_UTILITY[section](config[section])
+        try:
+            SECTION_TO_UTILITY[section](config[section])
+        except Exception as e:
+            log.error('Failed to backup [%s] because of: %s', section, e)
 
 
 if __name__ == '__main__':
