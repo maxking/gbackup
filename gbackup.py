@@ -4,8 +4,9 @@ import time
 import logging
 from pathlib import Path
 
+import requests
 import gitlab
-
+import github
 
 GITLAB_EXPORT_FINISHED_STATUS = 'finished'
 EXPORT_WAIT_TIME = 2
@@ -81,14 +82,14 @@ def gl_download_project(project, config, gl, section):
     backup_path = Path(
         config.get('backup_dir', '~/.gitlab-backup'),
         section,
-        project.path_with_namespace)
-    backup_path.expanduser()
+        project.path_with_namespace).expanduser()
+
     backup_path.mkdir(parents=True, exist_ok=True)
 
     backup_file = backup_path / time.strftime('%d-%b-%Y-%H-%M.tar.gz')
 
-    log.info('Downloading backup for %s to %s',
-             project.web_url, backup_file)
+    log.info('Downloading backup for %s to %s', project.web_url, backup_file)
+
     with open(str(backup_file), 'wb') as fd:
         export.download(streamed=True, action=fd.write)
 
@@ -120,7 +121,7 @@ def gl_get_projects(gl, config):
 def backup_gitlab(config, section):
     """Backup Gitlab projects.
 
-    :param config: The configuration to backup gitlab.
+    :param config: The configuration to backup gitlab projects.
     :type config: dict
     :param section: The name of the section to backup.
     :type section: str
@@ -128,6 +129,73 @@ def backup_gitlab(config, section):
     gl = gl_get_instance(config)
     for project in gl_get_projects(gl, config):
         gl_download_project(project, config, gl, section)
+
+
+def get_gh_instance(config):
+    """Return an instance of Github.
+
+    :param config: The Github configuration from config file.
+    :type config: dict
+    """
+    if config.get('server'):
+        return github.Github(
+            base_url=config.get('server', 'https://github.com/api/v3'),
+            login_or_token=config['access_token'])
+    else:
+        return github.Github(config['access_token'])
+
+
+def gh_user_migration(project, gh, config, section):
+    user = gh.get_user()
+    log.info('Backing up repo %s for user %s at %s',
+             project, user.name, section)
+    migration = user.create_migration(repos=[project],
+                                      lock_repositories=False)
+    status = migration.get_status()
+    while status in ('pending', 'exporting'):
+        # Technically, this is wrong because of TOCTOU bug, but I am not much
+        # worried about the attacks that can happen here. At worst, this can
+        # fail to backup.
+        time.sleep(EXPORT_WAIT_TIME)
+        status = migration.get_status()
+
+    try:
+        if status == 'failed':
+            log.error('Backup of [%s] for [%s] failed.', project, section)
+            return
+        assert status == 'exported', 'Unexpected status {}'.format(status)
+        archive_url = migration.get_archive_url()
+        backup_path = Path(
+            config.get('backup_dir', '~/.github-backup'),
+            section,
+            user.login,
+            project).expanduser()
+
+        backup_path.mkdir(parents=True, exist_ok=True)
+
+        backup_file = backup_path / time.strftime('%d-%b-%Y-%H-%M.tar.gz')
+
+        with backup_file.open('wb+') as fd:
+            raw_tar = requests.get(archive_url)
+            fd.write(raw_tar.content)
+    except Exception as e:
+        log.error('Failed to backup %s due to %s', project, e)
+
+
+def backup_github(config, section):
+    """Backup Github projects.
+
+    :param config: The configuration to backup Github projects.
+    :type config: dict
+    :param section: The name of the section to backup.
+    :type section: str
+    """
+    gh = get_gh_instance(config)
+    if 'user' in config:
+        projects = [project.name
+                    for project in gh.get_user().get_repos()]
+        for project in projects:
+            gh_user_migration(project, gh, config, section)
 
 
 def main():
@@ -139,19 +207,21 @@ def main():
         exit(1)
     SECTION_TO_UTILITY = {
         'gitlab': backup_gitlab,
+        'github': backup_github,
     }
     # Run backup of each website.
     for section_name in config.sections():
         section = config[section_name]
+        if section['type'] not in SECTION_TO_UTILITY:
+            log.error('Unsupported section [%s] in config', section_name)
+            continue
+        # Run the actual backup.
+        log.info('Backing up %s', section_name)
         try:
-            if section['type'] not in SECTION_TO_UTILITY:
-                log.error('Unsupported section [%s] in config', section_name)
-                # Run the actual backup.
-            log.info('Backing up %s', section_name)
-            try:
-                SECTION_TO_UTILITY[section['type']](section, section_name)
-            except Exception as e:
-                log.error('Failed to backup [%s] because of: %s', section_name, e)
+            SECTION_TO_UTILITY[section['type']](section, section_name)
+        except Exception as e:
+            log.error('Failed to backup [%s] because of: %s', section_name, e)
+
 
 
 if __name__ == '__main__':
