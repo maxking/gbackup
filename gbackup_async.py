@@ -103,7 +103,8 @@ async def check_export_status(session, project_id):
         return None
 
 
-async def download_gitlab_export(session, project_id, project_name, download_path):
+async def download_gitlab_export(session, project_id, project_name, config):
+    export_path = get_project_export_path(project_name, config)
     status = await check_export_status(session, project_id)
     while status != 'finished':
         await asyncio.sleep(EXPORT_WAIT_TIME)
@@ -117,7 +118,7 @@ async def download_gitlab_export(session, project_id, project_name, download_pat
     url = gitlab_url_builder(f'projects/{project_id}/export/download')
     resp = await session.get(url)
     if resp.status == 200:
-        with open(download_path, 'wb') as fd:
+        with open(export_path, 'wb') as fd:
             while True:
                 chunk = await resp.content.read(CHUNK_SIZE)
                 if not chunk:
@@ -128,9 +129,9 @@ async def download_gitlab_export(session, project_id, project_name, download_pat
         print(f'Error response: {resp}')
 
 
-def get_project_export_path(project, config):
+def get_project_export_path(project_name, config):
     base_path = Path(config.get('backup_dir')).expanduser()
-    project_path = base_path / project.get('path_with_namespace')
+    project_path = base_path / project_name
     project_path.mkdir(parents=True, exist_ok=True)
     return project_path / time.strftime('%d-%b-%Y-%H-%M.tar.gz')
 
@@ -139,7 +140,6 @@ async def main():
     config = get_config()
     gl = get_gitlab_session(access_token=config.get('token'))
     projects = await get_user_projects(gl, config['user'])
-    migrations = []
     # Trigger all exports at once, so that we have them ready when we want to
     # download them, this optimizes the process a bit more, since we don't wait
     # as much for every single export since they are being exported while we
@@ -147,19 +147,19 @@ async def main():
     # We trigger export in decreasing order of size and download then in
     # increasing order of size so that the largest project has the maximum time
     # to get exported.
-    for project in sorted(projects, key=lambda x: x['statistics']['repository_size'], reverse=True):
-        # Trigger an export for a project. If it was triggered correctly, add it
-        # to migrations to download it later.
-        if await start_gitlab_export(gl, project.get('id'), project.get('path_with_namespace')):
-            migrations.append(project)
+    projects = sorted(projects, key=lambda x: x['statistics']['repository_size'], reverse=True)
+    await asyncio.gather(*[
+        start_gitlab_export(gl, project.get('id'), project.get('path_with_namespace'))
+        for project in projects
+    ])
     # We reverse the order in which download because we triggered download in
     # decreasing order of size. We want to download the smallest project first
     # so that larger projects get more time to download.
-    migrations.reverse()
-    for project in migrations:
-        export_path = get_project_export_path(project, config)
-        await download_gitlab_export(
-            gl, project.get('id'), project.get('path_with_namespace'), export_path)
+    await asyncio.gather(*[
+        download_gitlab_export(
+            gl, project.get('id'), project.get('path_with_namespace'), config)
+          for project in projects
+    ])
     await gl.close()
 
 loop = asyncio.get_event_loop()
